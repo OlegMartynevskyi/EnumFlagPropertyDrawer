@@ -1,1 +1,1 @@
-# EnumFlagPropertyDrawer
+# EnumFlagsPropertyDrawer
