@@ -27,28 +27,24 @@ public sealed class EnumFlagsDrawer : PropertyDrawer
 
 	public override float GetPropertyHeight (SerializedProperty property, GUIContent label)
 	{		
-		float height = 0.0f;
-		if (enumField != null && enumField.FieldType.IsEnum) {
-			height += LABEL_HEIGHT;
-		}
+		float height = LABEL_HEIGHT;
 		if (foldout) {
 			height += rowCount * TOGGLE_HEIGHT;
 		}
-		return height > 0 ? height : base.GetPropertyHeight (property, label);
+		return height; 
 	}
 
 	public override void OnGUI (Rect position, SerializedProperty property, GUIContent label)
 	{		
 		EditorGUI.BeginProperty (position, label, property);	
-		enumField = property.serializedObject.targetObject.GetType ().GetField (property.propertyPath, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-		if (enumField != null && enumField.FieldType.IsEnum) {
-			EnumFlags enumFlags = (EnumFlags)attribute;
-			string labelText = string.IsNullOrEmpty (enumFlags.EnumName) ? enumField.Name : enumFlags.EnumName;
-			foldout = EditorGUI.Foldout (new Rect (position.x, position.y, position.width, LABEL_HEIGHT), foldout, labelText);
-			if (foldout) {
-				Type enumType = enumField.FieldType;
-				string[] enumNames = Enum.GetNames (enumType);
-				int[] enumValues = (int[])Enum.GetValues (enumType); 
+		EnumFlags enumFlagsSetup = (EnumFlags)attribute;
+		string labelText = string.IsNullOrEmpty (enumFlagsSetup.EnumName) ? property.name : enumFlagsSetup.EnumName;
+		foldout = EditorGUI.Foldout (new Rect (position.x, position.y, position.width, LABEL_HEIGHT), foldout, labelText);
+		if (foldout) {
+			enumField = property.serializedObject.targetObject.GetType ().GetField (property.propertyPath, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);	
+			if (enumField != null && enumField.FieldType.IsEnum) {				
+				string[] enumNames = property.enumDisplayNames;
+				int[] enumValues = (int[])Enum.GetValues (enumField.FieldType);
 
 				if (enumValues.Length > 0) {
 					//Skip zero
@@ -60,16 +56,16 @@ public sealed class EnumFlagsDrawer : PropertyDrawer
 						}
 
 						int index = 0;
-						int row = 0;
+						int rowIndex = 0;
 						float totalWidth = 0.0f;
 						EditorGUI.BeginChangeCheck ();
 						do {							
 							float toggleWidth = enumNames [index + togglesShift].Length * fontSize;
 							if (totalWidth + toggleWidth > position.width) {
-								++row;
+								++rowIndex;
 								totalWidth = 0;
 							}
-							Rect togglePosition = new Rect (position.x + totalWidth, position.y + LABEL_HEIGHT + row * TOGGLE_HEIGHT, toggleWidth, TOGGLE_HEIGHT);
+							Rect togglePosition = new Rect (position.x + totalWidth, position.y + LABEL_HEIGHT + rowIndex * TOGGLE_HEIGHT, toggleWidth, TOGGLE_HEIGHT);
 							if (GUI.Button (togglePosition, enumNames [index + togglesShift], toggles [index] ? toggleButtonToggledStyle : toggleButtonNormalStyle)) {
 								toggles [index] = !toggles [index];
 							}
@@ -77,14 +73,14 @@ public sealed class EnumFlagsDrawer : PropertyDrawer
 							totalWidth += toggleWidth;
 						} while(index < toggles.Length);
 
-						if (EditorGUI.EndChangeCheck ()) {
+						if (EditorGUI.EndChangeCheck ()) {							
 							property.intValue = 0;
 							for (int i = 0; i < toggles.Length; ++i) {
 								if (toggles [i])
 									property.intValue |= enumValues [i + togglesShift];								
 							}
 						}
-						rowCount = row + 1;
+						rowCount = rowIndex + 1;
 					}
 				}
 			}
